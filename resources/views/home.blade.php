@@ -5,6 +5,7 @@
     <title>NAZEM | Home</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="{{ asset('static/css/style.css') }}">
+    <link rel="icon" type="image/png" href="{{ asset('nazem-logo.png') }}">
 </head>
 
 <body>
@@ -76,6 +77,62 @@
             </div>
         </div>
     </section>
+{{-- Services Section --}}
+<section class="home-section" style="padding:1px 0 0px;">
+    <div class="container">
+
+        <h2 style="font-size:28px;font-weight:700;margin-bottom:32px;">
+            Services
+        </h2>
+
+        <div class="grid" style="grid-template-columns: repeat(3, minmax(0,1fr)); gap:24px;">
+
+            {{-- Card 1 - Expiry Alerts --}}
+            <article class="card" style="text-align:left; padding:28px 24px;">
+                <div style="display:flex; justify-content:center; margin-bottom:20px;">
+                    <img src="{{ asset('static/img/IMG_9744.png') }}"
+                         alt="Expiry Alerts"
+                         style="max-width:150px; height:auto;">
+                </div>
+
+                <h3 style="font-size:18px; font-weight:600; margin-bottom:8px;">Expiry Alerts</h3>
+                <p class="muted" style="font-size:14px; line-height:1.6;">
+                    Get instant notifications for products nearing expiry to reduce waste.
+                </p>
+            </article>
+
+            {{-- Card 2 - Demand Forecasting --}}
+            <article class="card" style="text-align:left; padding:28px 24px;">
+                <div style="display:flex; justify-content:center; margin-bottom:20px;">
+                    <img src="{{ asset('static/img/IMG_9745.png') }}"
+                         alt="Demand Forecasting"
+                         style="max-width:150px; height:auto;">
+                </div>
+
+                <h3 style="font-size:18px; font-weight:600; margin-bottom:8px;">Demand Forecasting</h3>
+                <p class="muted" style="font-size:14px; line-height:1.6;">
+                    AI predicts future product demand using past data helping plan stock levels efficiently.
+                </p>
+            </article>
+
+            {{-- Card 3 - Stock Optimization --}}
+            <article class="card" style="text-align:left; padding:28px 24px;">
+                <div style="display:flex; justify-content:center; margin-bottom:20px;">
+                    <img src="{{ asset('static/img/IMG_9746.png') }}"
+                         alt="Stock Optimization"
+                         style="max-width:150px; height:auto;">
+                </div>
+
+                <h3 style="font-size:18px; font-weight:600; margin-bottom:8px;">Stock Optimization</h3>
+                <p class="muted" style="font-size:14px; line-height:1.6;">
+                    Monitors stock using a 3-color system (Green, Yellow, Red) to prevent shortage or overstock.
+                </p>
+            </article>
+
+        </div>
+
+    </div>
+</section>
 
     {{-- FEATURES --}}
     <section class="container section">

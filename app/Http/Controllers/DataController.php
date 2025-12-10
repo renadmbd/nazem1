@@ -128,4 +128,20 @@ class DataController extends Controller
 
         return 'safe';
     }
+
+    public function deleteAll()
+    {
+    // أول شيء نحذف الطلبات المرتبطة (عشان الـ foreign key لو فيه)
+    Order::query()->delete();
+
+    // بعدين نحذف كل الأصناف
+    Item::query()->delete();
+
+    // نرجع لصفحة الداتا مع رسالة نجاح
+    return redirect()
+        ->route('data')
+        ->with('success', 'All items deleted successfully.');
+    }
+
+
 }

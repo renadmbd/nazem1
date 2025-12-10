@@ -10,7 +10,6 @@
 
 <nav class="topnav">
     <div class="container">
-        {{-- اللوجو يودّي للهوم --}}
         <a class="brand" href="{{ route('home') }}">NAZEM</a>
 
         <div class="nav-links">
@@ -34,25 +33,25 @@
     <div class="container">
         <h2 class="page-title">Alerts</h2>
 
-        {{-- Filters + Search --}}
+        {{-- ===== Filter tabs + Search + Sort ===== --}}
         <div class="card" style="margin-bottom:16px;">
-            <div class="filters">
-                <button class="btn btn--ghost active" data-filter="all">
-                    All <span id="cntAll" class="badge">{{ $counts['all'] }}</span>
+            <div class="filters" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                <button type="button" class="chip chip-tab active" data-filter="all">
+                    All <span class="badge">{{ $counts['all'] }}</span>
                 </button>
-                <button class="btn btn--ghost" data-filter="low">
-                    Low <span id="cntLow" class="badge">{{ $counts['low'] }}</span>
+                <button type="button" class="chip chip-tab" data-filter="low">
+                    Low <span class="badge">{{ $counts['low'] }}</span>
                 </button>
-                <button class="btn btn--ghost" data-filter="out">
-                    Out <span id="cntOut" class="badge">{{ $counts['out'] }}</span>
+                <button type="button" class="chip chip-tab" data-filter="out">
+                    Out <span class="badge">{{ $counts['out'] }}</span>
                 </button>
-                <button class="btn btn--ghost" data-filter="expiry">
-                    Expiry <span id="cntExp" class="badge">{{ $counts['expiry'] }}</span>
+                <button type="button" class="chip chip-tab" data-filter="expiry">
+                    Expiry <span class="badge">{{ $counts['expiry'] }}</span>
                 </button>
 
-                <div class="searchbar" style="margin-left:auto">
-                    <input id="q" class="input" type="search" placeholder="Search item…">
-                    <select id="sort" class="select">
+                <div style="margin-left:auto;display:flex;gap:8px;flex:1;max-width:520px;">
+                    <input id="q" class="input" type="search" placeholder="Search item…" style="flex:1;">
+                    <select id="sort" class="select" style="min-width:170px;">
                         <option value="severity">Sort: Severity</option>
                         <option value="expirySoon">Sort: Expiry soon</option>
                         <option value="name">Sort: Name</option>
@@ -61,38 +60,44 @@
             </div>
         </div>
 
-        {{-- Alerts list --}}
+        {{-- ===== Alerts list (ملونة) ===== --}}
         <ul id="list" class="alert-list">
             @forelse($alerts as $alert)
-                <li class="alert-card alert-{{ $alert->type }}"
+                @php
+                    $cardClass = 'alert-' . $alert->type; // alert-low / alert-out / alert-expiry
+                    $pillClass = $alert->type === 'out'
+                        ? 'pill-out'
+                        : ($alert->type === 'low'
+                            ? 'pill-low'
+                            : 'pill-exp');
+                @endphp
+
+                <li class="alert-card {{ $cardClass }}"
                     data-type="{{ $alert->type }}"
                     data-name="{{ strtolower($alert->name) }}"
                     data-days="{{ $alert->days_left ?? 99999 }}"
-                    data-severity="{{ $alert->severity }}">
+                    data-severity="{{ $alert->severity ?? 0 }}">
 
                     <div class="alert-header">
-                        @php
-                            $pill = $alert->type === 'out'
-                                ? 'pill-out'
-                                : ($alert->type === 'low' ? 'pill-low' : 'pill-exp');
-                        @endphp
-                        <span class="pill {{ $pill }}">
+                        <span class="pill {{ $pillClass }}">
                             {{ strtoupper($alert->type) }}
                         </span>
-                        <small class="muted">
-                            {{ $alert->item_id ? '#'.$alert->item_id : '' }}
-                        </small>
+                        <span class="alert-id">#{{ $alert->item_id }}</span>
                     </div>
 
                     <p class="alert-title">{{ $alert->name }}</p>
                     <p class="alert-meta">{{ $alert->meta }}</p>
                 </li>
             @empty
-                <p class="helper">No alerts.</p>
             @endforelse
         </ul>
 
-        <p class="helper">
+        {{-- رسالة "No alerts" نتحكم فيها بالجافاسكربت --}}
+        <p id="empty-msg" class="helper" style="{{ $alerts->isEmpty() ? '' : 'display:none;' }}">
+            No alerts.
+        </p>
+
+        <p class="helper" style="margin-top:8px;">
             Rules: Out (qty=0), Low (qty ≤ min), Expiry (≤ {{ $expiryDays }} days)
         </p>
     </div>
@@ -101,29 +106,28 @@
 <script>
     const EXPIRY_DAYS = {{ $expiryDays }};
     const listEl   = document.getElementById('list');
-    const items    = [...listEl.querySelectorAll('li[data-type]')];
-    const buttons  = [...document.querySelectorAll('[data-filter]')];
+    const allItems = Array.from(listEl.querySelectorAll('li.alert-card'));
+    const buttons  = Array.from(document.querySelectorAll('[data-filter]'));
     const q        = document.getElementById('q');
     const sortSel  = document.getElementById('sort');
+    const emptyMsg = document.getElementById('empty-msg');
 
-    let current = 'all';
+    let currentFilter = 'all';
 
     function renderAlerts() {
-        const qv = q.value.trim().toLowerCase();
+        const qv   = q.value.trim().toLowerCase();
         const mode = sortSel.value;
 
-        let filtered = items.slice();
+        let filtered = allItems.slice();
 
         // filter by type
-        if (current !== 'all') {
-            filtered = filtered.filter(li => li.dataset.type === current);
+        if (currentFilter !== 'all') {
+            filtered = filtered.filter(li => li.dataset.type === currentFilter);
         }
 
-        // search by name
+        // search
         if (qv) {
-            filtered = filtered.filter(li =>
-                li.dataset.name.indexOf(qv) !== -1
-            );
+            filtered = filtered.filter(li => li.dataset.name.includes(qv));
         }
 
         // sort
@@ -132,37 +136,43 @@
                 return a.dataset.name.localeCompare(b.dataset.name);
             }
             if (mode === 'expirySoon') {
-                return (+a.dataset.days || 99999) - (+b.dataset.days || 99999);
+                const da = Number(a.dataset.days || 99999);
+                const db = Number(b.dataset.days || 99999);
+                return da - db; // الأقل أيام يطلع فوق
             }
             // severity (out > low > expiry)
-            return (+b.dataset.severity || 0) - (+a.dataset.severity || 0);
+            const sa = Number(a.dataset.severity || 0);
+            const sb = Number(b.dataset.severity || 0);
+            if (sb !== sa) return sb - sa;
+            return a.dataset.name.localeCompare(b.dataset.name);
         });
 
-        // hide all then show only filtered
-        items.forEach(li => li.style.display = 'none');
-        filtered.forEach(li => li.style.display = '');
+        // أولاً نخفي الكل
+        allItems.forEach(li => li.style.display = 'none');
 
-        // active button
-        buttons.forEach(b => b.classList.toggle('active', b.dataset.filter === current));
+        // نعرض فقط اللي بعد الفلترة بالترتيب الجديد
+        filtered.forEach(li => {
+            li.style.display = '';
+            listEl.appendChild(li); // يعيد ترتيب العناصر في الـ DOM
+        });
 
-        // لو مافي عناصر ظاهرة
-        if (!filtered.length) {
-            if (!document.getElementById('no-alerts-msg')) {
-                const p = document.createElement('p');
-                p.id = 'no-alerts-msg';
-                p.className = 'helper';
-                p.textContent = 'No alerts.';
-                listEl.appendChild(p);
-            }
+        // تفعيل زر الفلتر
+        buttons.forEach(b => {
+            b.classList.toggle('active', b.dataset.filter === currentFilter);
+        });
+
+        // رسالة "No alerts"
+        if (filtered.length === 0) {
+            emptyMsg.style.display = '';
         } else {
-            const msg = document.getElementById('no-alerts-msg');
-            if (msg) msg.remove();
+            emptyMsg.style.display = 'none';
         }
     }
 
+    // events
     buttons.forEach(btn => {
         btn.addEventListener('click', () => {
-            current = btn.dataset.filter;
+            currentFilter = btn.dataset.filter;
             renderAlerts();
         });
     });
@@ -172,7 +182,9 @@
 
     // أول تحميل
     renderAlerts();
+
 </script>
 
 </body>
 </html>
+

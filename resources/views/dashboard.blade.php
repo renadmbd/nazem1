@@ -122,12 +122,13 @@
     </article>
 
     <article class="card">
-        <h3>Expiry Soon</h3>
-        <p style="font-size:28px;font-weight:800;margin:8px 0;">
-            <span class="num-orange">{{ $kpis['expiryItems'] }}</span>
-        </p>
-        <p class="muted">Expiring in ≤ 14 days</p>
-    </article>
+    <h3>Expiry Soon</h3>
+    <p style="font-size:28px;font-weight:800;margin:8px 0;">
+        <span style="color:#696c70ff;">{{ $kpis['expiryItems'] }}</span>
+    </p>
+    <p class="muted">Expiring in ≤ 14 days</p>
+</article>
+
 </div>
 
 

@@ -151,6 +151,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/data/quick-sell', [DataController::class, 'quickSell'])
         ->name('data.quickSell');
 
+    // حق زر الحذف  اللي في صفحة الداتا 
+    Route::post('/data/delete-all', [DataController::class, 'deleteAll'])
+         ->name('data.deleteAll');
+
     // صفحة التنبيهات
     // فيها تنبيهات الكميات المنخفضة + تواريخ الانتهاء (expiry) حسب منطق المشروع
     Route::get('/alerts', [AlertController::class, 'index'])
@@ -161,8 +165,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', function () {
         return view('profile');
     })->name('profile');
+    
 });
-
 
 // حق تسجيل دخول الايميل بايميل حقيقي 
 // هذا روت داخلي نستخدمه عشان نختبر إعدادات الإيميل من .env
@@ -209,4 +213,6 @@ Route::middleware('guest')->group(function () {
     // - بعدها يقدر يسجل دخول بالكلمة الجديدة
     Route::post('/verify-code', [PasswordResetController::class, 'verifyAndReset'])
         ->name('password.verify');
+
+
 });

@@ -62,15 +62,31 @@
         <div class="card" style="margin-top:16px;">
 
             {{-- العنوان + زر الريفرش --}}
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                <h3 class="card__title" style="margin:0;">Preview</h3>
+            <div style="display:flex; justify-content:flex-end; margin-bottom:8px; gap:10px;">
 
-                <form method="GET" action="{{ route('data') }}">
-                    <button class="chip" type="submit" style="padding:6px 16px; cursor:pointer;">
-                        Refresh
-                    </button>
-                </form>
-            </div>
+    <!-- زر Refresh كأيقونة -->
+    <form method="GET" action="{{ route('data') }}">
+        <button type="submit"
+                title="Refresh"
+                style="background:none; border:none; cursor:pointer;">
+            <img src="{{ asset('static/img/refresh.png') }}"
+                 alt="Refresh"
+                 width="26">
+        </button>
+    </form>
+
+    <!-- زر Delete All -->
+    <form method="POST" action="{{ route('data.deleteAll') }}">
+        @csrf
+        <button type="submit"
+                onclick="return confirm('⚠️ Are you sure you want to delete all data? This action cannot be undone !')"
+                style="background:#dc2626; color:white; border:none; padding:6px 12px; border-radius:6px; cursor:pointer;">
+            Delete All
+        </button>
+    </form>
+
+</div>
+
 
             @if($items->isEmpty())
                 <p class="helper">No data available. Please import a file.</p>

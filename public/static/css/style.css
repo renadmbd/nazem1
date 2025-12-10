@@ -415,3 +415,57 @@
     background: #f3f4f6;
   }
   
+  /* ========== ALERT FILTER TABS ========== */
+
+.chip-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 18px;
+    border-radius: 999px;
+    border: 1px solid #d1d5db;          /* رمادي فاتح */
+    background-color: #ffffff;
+    font-size: 14px;
+    font-weight: 500;
+    color: #111827;
+    cursor: pointer;
+    transition: background-color 0.15s ease, 
+                box-shadow 0.15s ease,
+                color 0.15s ease,
+                border-color 0.15s ease;
+}
+
+/* شكل العدد داخل التاب (الدائرة الصغيرة الزرقاء) */
+.chip-tab .badge {
+    min-width: 24px;
+    height: 24px;
+    padding: 0 6px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #e5edff;                 /* أزرق جدًا فاتح */
+    color: #1d4ed8;                      /* أزرق */
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* الحالة النشطة (التاب المختار) – نفس الشكل الأزرق القديم */
+.chip-tab.active {
+    border-color: #c7d2fe;
+    background-color: #e5edff;           /* الخلفية الزرقاء الفاتحة */
+    color: #111827;
+    box-shadow: 0 0 0 1px rgba(59,130,246,0.10);
+}
+
+/* لما يكون التاب Active تخلي الدائرة أغمق شوي */
+.chip-tab.active .badge {
+    background: #dbe5ff;
+    color: #1d4ed8;
+}
+
+/* هوفر بسيط */
+.chip-tab:hover {
+    border-color: #c7d2fe;
+    background-color: #f3f4ff;
+}
