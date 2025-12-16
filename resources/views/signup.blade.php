@@ -36,7 +36,7 @@
             <p class="errmsg">{{ $errors->first() }}</p>
         @endif
 
-        {{-- رسالة نجاح (نادراً ما تظهر هنا) --}}
+        {{-- رسالة نجاح --}}
         @if (session('success'))
             <p class="helper" style="color: green">{{ session('success') }}</p>
         @endif
