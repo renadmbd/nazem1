@@ -10,16 +10,6 @@ model = joblib.load(MODEL_PATH)
 app = Flask(__name__)
 
 def build_feature_frame(payload):
-    """
-    هنا نبني DataFrame بنفس الأعمدة اللي تدرب عليها المودل:
-    expiration_date, category, price, quantity_sold (label), date, product_id
-
-    إحنا في التنبؤ **ما عندنا quantity_sold** لأنه هو اللي نتنبأ له,
-    فبنحط أي رقم placeholder والمودل راح يتجاهله لو التدريب كان صح
-    (أو يكون العمود أصلاً هو الـ target داخل الـ pipeline).
-    لو في سكربت التدريب عندك, يفضّل تحفظي الـ pipeline بحيث يتوقع
-    من DataFrame بدون عمود quantity_sold.
-    """
 
     product_id      = payload["product_id"]
     category        = payload["category"]
@@ -30,8 +20,7 @@ def build_feature_frame(payload):
 
     dates = [start_date + timedelta(days=i) for i in range(days)]
 
-    # NOTE: غيّري فورمات التاريخ هنا لو ملف التدريب كان مثلاً 10/29/2026
-    # مثلاً: d.strftime('%m/%d/%Y')
+
     df = pd.DataFrame({
         "expiration_date": [expiration_date] * days,
         "category": [category] * days,
