@@ -4,82 +4,76 @@ namespace App\Http\Controllers;
 
 use App\Models\Item;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 
 class AlertController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $items = Item::all();
-        $alerts = [];
-        $today = Carbon::today();
-        $expiryLimit = 14;
+        $expiryDays = 14; // نفس القاعدة المكتوبة في أسفل الصفحة
+
+        // تجميع الأصناف (لاحقاً ممكن نفلترها per user_id)
+        $items  = Item::orderBy('id')->get();
+        $today  = Carbon::today();
+        $alerts = collect();
 
         foreach ($items as $item) {
-            $qty  = (int)($item->stock_availability ?? 0);
-            $min  = (int)($item->min_qty ?? 0);
-            $name = $item->name ?? '(Unnamed item)';
+            $type      = null; // low / out / expiry
+            $meta      = '';
+            $daysLeft  = null;
+            $severity  = 0;   // للتصنيف: out=3, low=2, expiry=1
 
-            $expiryDate = $item->expiration_date
-                ? Carbon::parse($item->expiration_date)
-                : null;
-
-            $daysLeft = $expiryDate
-                ? $today->diffInDays($expiryDate, false) // ممكن يكون سالب = منتهي
-                : null;
-
-            // Out
-            if ($qty <= 0) {
-                $alerts[] = (object) [
-                    'type'      => 'out',
-                    'name'      => $name,
-                    'meta'      => 'Out of stock',
-                    'item_id'   => $item->id,
-                    'days_left' => $daysLeft,
-                    'severity'  => 3,
-                ];
-            }
-            // Low (أقل من الحد الأدنى ومو صفر)
-            elseif ($qty < $min) {
-                $alerts[] = (object) [
-                    'type'      => 'low',
-                    'name'      => $name,
-                    'meta'      => "{$qty} / min {$min}",
-                    'item_id'   => $item->id,
-                    'days_left' => $daysLeft,
-                    'severity'  => 2,
-                ];
+            // Out / Low
+            if ($item->stock_availability <= 0) {
+                $type     = 'out';
+                $severity = 3;
+                $meta     = 'Out of stock';
+            } elseif ($item->stock_availability <= $item->min_qty) {
+                $type     = 'low';
+                $severity = 2;
+                $meta     = $item->stock_availability.' / min '.$item->min_qty;
             }
 
-            // Expiry خلال 14 يوم أو أقل (أو منتهي)
-            if ($expiryDate && $daysLeft !== null && $daysLeft <= $expiryLimit) {
-                $meta = $daysLeft < 0
-                    ? 'Expired'
-                    : "{$daysLeft} days remaining";
+            // Expiry
+            if ($item->expiration_date) {
+                $diff = $today->diffInDays(Carbon::parse($item->expiration_date), false);
 
-                $alerts[] = (object) [
-                    'type'      => 'expiry',
-                    'name'      => $name,
+                if ($diff <= $expiryDays) {
+                    $type     = 'expiry';
+                    $severity = max($severity, 1);
+                    $daysLeft = $diff;
+
+                    if ($diff >= 0) {
+                        $meta = $diff.' days remaining';
+                    } else {
+                        $meta = 'Expired '.abs($diff).' days ago';
+                    }
+                }
+            }
+
+            if ($type) {
+                $alerts->push((object) [
+                    'type'      => $type,
+                    'item_id'   => $item->id,
+                    'name'      => $item->name,
                     'meta'      => $meta,
-                    'item_id'   => $item->id,
                     'days_left' => $daysLeft,
-                    'severity'  => 1,
-                ];
+                    'severity'  => $severity,
+                ]);
             }
         }
 
-        $alertsCollection = collect($alerts);
-
         $counts = [
-            'all'    => $alertsCollection->count(),
-            'low'    => $alertsCollection->where('type', 'low')->count(),
-            'out'    => $alertsCollection->where('type', 'out')->count(),
-            'expiry' => $alertsCollection->where('type', 'expiry')->count(),
+            'all'    => $alerts->count(),
+            'low'    => $alerts->where('type', 'low')->count(),
+            'out'    => $alerts->where('type', 'out')->count(),
+            'expiry' => $alerts->where('type', 'expiry')->count(),
         ];
 
         return view('alerts', [
             'alerts'     => $alerts,
             'counts'     => $counts,
-            'expiryDays' => $expiryLimit,
+            'expiryDays' => $expiryDays,
         ]);
     }
 }

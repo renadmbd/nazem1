@@ -1,96 +1,87 @@
 import sys
 import json
-import pickle
-from pathlib import Path
-from datetime import timedelta
 import os
-
+from datetime import timedelta
 import numpy as np
 import pandas as pd
 
-# مسار ملف الموديلات (نفس مجلد السكربت)
-MODEL_PATH = Path(__file__).with_name("xgb_models.pkl")
-
-
-def load_models():
-    """تحميل قاموس الموديلات {product_id: model} من ملف pickle."""
-    with open(MODEL_PATH, "rb") as f:
-        models = pickle.load(f)
-    return models
-
-
-# نفس قائمة الـ features المستخدمة في التدريب
-SELECTED_FEATURES = [
-    "dayofweek",
-    "weekofyear",
-    "month",
-    "day",
-    "lag_1",
-    "lag_3",
-    "lag_7",
-    "lag_14",
-    "roll_mean_3",
-    "roll_mean_7",
-    "roll_mean_14",
-]
-
-
-def forecast_for_product(history_df: pd.DataFrame, model, horizon: int = 7):
+def prepare_daily_history(history_df: pd.DataFrame) -> pd.DataFrame:
     """
-    history_df: تاريخ المبيعات لمنتج واحد (date, quantity_sold)
-    model: موديل XGBoost لهذا المنتج
-    horizon: عدد الأيام للأمام
+    يحول سجل الطلبات إلى سلسلة يومية:
+    - يجمع المبيعات في نفس اليوم
+    - يملأ الأيام الناقصة بصفر
     """
-    history_df = history_df.sort_values("date")
+    history_df = history_df.copy()
+    history_df["date"] = pd.to_datetime(history_df["date"])
 
-    # لازم يكون فيه على الأقل 14 يوم عشان نستخدم نفس منطق التدريب
-    if len(history_df) < 14:
-        return None
+    history_df = (
+        history_df.groupby("date", as_index=False)["quantity_sold"]
+        .sum()
+        .sort_values("date")
+    )
 
-    # نأخذ آخر 14 يوم كنافذة
-    window = history_df.tail(14)[["date", "quantity_sold"]].copy()
+    if history_df.empty:
+        return history_df
+
+    full_range = pd.date_range(
+        start=history_df["date"].min(),
+        end=history_df["date"].max(),
+        freq="D"
+    )
+
+    history_df = (
+        history_df.set_index("date")
+        .reindex(full_range, fill_value=0)
+        .rename_axis("date")
+        .reset_index()
+    )
+
+    return history_df
+
+
+def simple_forecast(history_df: pd.DataFrame, horizon: int = 30):
+    """
+    Forecast مبسط:
+    - يعتمد على متوسط آخر 7 أيام
+    - ومتوسط آخر 14 يوم
+    - واتجاه trend بسيط
+    """
+    history_df = prepare_daily_history(history_df)
+
+    if history_df.empty:
+        return [], []
+
+    series = history_df["quantity_sold"].astype(float).tolist()
+    last_date = history_df["date"].iloc[-1]
 
     future_dates = []
     future_preds = []
 
-    for _ in range(horizon):
-        last_date = window["date"].iloc[-1]
-        next_date = last_date + timedelta(days=1)
+    for step in range(1, horizon + 1):
+        recent_7 = series[-7:] if len(series) >= 7 else series
+        recent_14 = series[-14:] if len(series) >= 14 else series
 
-        new_row = {
-            "date": next_date,
-            "dayofweek": next_date.dayofweek,
-            "weekofyear": int(next_date.isocalendar().week),
-            "month": next_date.month,
-            "day": next_date.day,
-        }
+        avg_7 = float(np.mean(recent_7)) if recent_7 else 0.0
+        avg_14 = float(np.mean(recent_14)) if recent_14 else 0.0
 
-        # lags 1, 3, 7, 14
-        for lag in [1, 3, 7, 14]:
-            new_row[f"lag_{lag}"] = window["quantity_sold"].iloc[-lag]
+        # trend بسيط: الفرق بين متوسط آخر 7 ومتوسط آخر 14
+        trend = avg_7 - avg_14
 
-        # rolling means
-        new_row["roll_mean_3"] = window["quantity_sold"].tail(3).mean()
-        new_row["roll_mean_7"] = window["quantity_sold"].tail(7).mean()
-        new_row["roll_mean_14"] = window["quantity_sold"].tail(14).mean()
+        # forecast weighted
+        pred = (avg_7 * 0.65) + (avg_14 * 0.35) + (trend * 0.25)
 
-        X_future = (
-            pd.DataFrame([new_row])[SELECTED_FEATURES]
-            .apply(pd.to_numeric, errors="coerce")
-            .astype(float)
-        )
+        # damping خفيف حتى لا يتضخم التوقع بزيادة
+        pred *= (1 - min(step * 0.01, 0.15))
 
-        # التنبؤ لليوم القادم
-        yhat = float(model.predict(X_future)[0])
+        # منع السالب
+        pred = max(0.0, pred)
 
+        next_date = last_date + timedelta(days=step)
         future_dates.append(next_date.strftime("%Y-%m-%d"))
-        future_preds.append(yhat)
+        future_preds.append(round(pred, 2))
 
-        # نضيف التنبؤ للنافذة عشان نستخدمه في lags والخطوات الجاية
-        window = pd.concat(
-            [window, pd.DataFrame({"date": [next_date], "quantity_sold": [yhat]})],
-            ignore_index=True,
-        )
+        # نضيف التوقع للسلسلة حتى نبني عليه التوقعات التالية
+        series.append(pred)
 
     return future_dates, future_preds
 
@@ -102,90 +93,80 @@ def main():
 
     arg = sys.argv[1]
 
-    # لو argument عبارة عن مسار ملف JSON نقرأ منه
     if os.path.exists(arg):
         with open(arg, "r", encoding="utf-8") as f:
             payload = json.load(f)
     else:
-        # fallback: لو تم إرسال JSON مباشرة (الأسلوب القديم)
         payload = json.loads(arg)
 
     rows = payload.get("rows", [])
-    horizon = int(payload.get("horizon", 7))
+    horizon = int(payload.get("horizon", 30))
+    future_dates_payload = payload.get("future_dates", [])
 
     if not rows:
-        print(json.dumps({"dates": [], "predictions": []}))
+        print(json.dumps({
+            "dates": future_dates_payload,
+            "predictions": [0.0] * len(future_dates_payload)
+        }))
         return
 
     df = pd.DataFrame(rows)
 
-    # نتأكد من الأعمدة المطلوبة
-    if not {"date", "quantity_sold", "product_id"}.issubset(df.columns):
+    required_cols = {"date", "quantity_sold", "product_id"}
+    if not required_cols.issubset(df.columns):
         print(json.dumps({"error": "missing_columns"}))
         return
 
-    # تحويل التاريخ
     df["date"] = pd.to_datetime(df["date"])
-
-    # تحميل الموديلات
-    try:
-        models = load_models()
-    except Exception as e:
-        print(json.dumps({"error": f"load_models_failed: {e}"}))
-        return
+    df["quantity_sold"] = pd.to_numeric(df["quantity_sold"], errors="coerce").fillna(0)
 
     agg_dates = None
     agg_preds = None
+    used_products = []
+    debug = []
 
-    # Group by product_id ونسوي forecast لكل منتج
-    for pid, g in df.groupby("product_id"):
-        # نحاول نلاقي الموديل بالمفتاح المناسب (int أو str)
-        candidates = [pid]
-        pid_str = str(pid)
-        if pid_str not in candidates:
-            candidates.append(pid_str)
-        if isinstance(pid, str) and pid.isdigit():
-            candidates.append(int(pid))
+    for pid, group in df.groupby("product_id"):
+        dates, preds = simple_forecast(group[["date", "quantity_sold"]].copy(), horizon=horizon)
 
-        model = None
-        for key in candidates:
-            if key in models:
-                model = models[key]
-                break
-
-        if model is None:
-            # مافي موديل لهذا المنتج → نتجاهله
+        if not dates or not preds:
+            debug.append({
+                "product_id": str(pid),
+                "status": "skipped_no_history"
+            })
             continue
 
-        result = forecast_for_product(
-            g[["date", "quantity_sold"]].copy(), model, horizon=horizon
-        )
-        if result is None:
-            continue
-
-        dates, preds = result
         preds = np.array(preds, dtype=float)
+
+        debug.append({
+            "product_id": str(pid),
+            "status": "forecasted",
+            "sample_predictions": preds[:5].tolist()
+        })
+
+        used_products.append(str(pid))
 
         if agg_dates is None:
             agg_dates = dates
             agg_preds = preds
         else:
-            # نجمع التنبؤات عبر المنتجات لخط واحد
             agg_preds += preds
 
     if agg_dates is None:
-        # ما قدرنا نتنبأ لأي منتج
         out = {
-            "dates": payload.get("future_dates", []),
-            "predictions": [0.0] * len(payload.get("future_dates", [])),
+            "dates": future_dates_payload,
+            "predictions": [0.0] * len(future_dates_payload),
+            "error": "no_usable_products_for_forecast",
+            "debug": debug
         }
     else:
         out = {
             "dates": agg_dates,
-            "predictions": agg_preds.tolist(),
+            "predictions": agg_preds.round(2).tolist(),
+            "used_products": used_products,
+            "debug": debug
         }
 
-    print(json.dumps(out))
+    print(json.dumps(out, ensure_ascii=False))
 
 
 if __name__ == "__main__":

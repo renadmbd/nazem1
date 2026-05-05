@@ -13,7 +13,6 @@
     <div class="container">
         <a class="brand" href="{{ route('home') }}">NAZEM</a>
 
-        {{-- إذا المستخدم مسجّل دخول --}}
         @auth
             <div class="nav-links">
                 <a class="active" href="{{ route('home') }}">Home</a>
@@ -29,8 +28,6 @@
                     <button class="chip" type="submit">Log out</button>
                 </form>
             </div>
-
-        {{-- إذا المستخدم غير مسجّل دخول --}}
         @else
             <div class="nav-links">
                 <a class="active" href="{{ route('home') }}">Home</a>
@@ -44,61 +41,118 @@
     </div>
 </nav>
 
-
 <main class="page">
 
-    {{-- HERO SECTION --}}
-    <section class="hero container">
+    {{-- HERO --}}
+    <section class="hero container hero-animate">
         <div class="hero__grid">
             <div>
-                <h1>NAZEM Management System</h1>
-                <p>
-                    AI-powered warehouse management: real-time stock tracking,
-                    expiry monitoring, demand forecasting, and automated alerts.
+                <h1 class="hero-title">NAZEM Management System</h1>
+
+                <p class="hero-desc">
+                    AI-powered warehouse management with real-time tracking,
+                    smart alerts, and demand forecasting.
                 </p>
 
                 <div class="actions">
                     @auth
-                        {{-- لو مسجّل دخول يختفي الزر --}}
+                        <a class="btn btn--primary" href="{{ route('dashboard') }}">
+                            Go to Dashboard
+                        </a>
+
+                        <a class="btn btn--ghost" href="{{ route('alerts') }}">
+                            View Alerts
+                        </a>
                     @else
-                        {{-- لو ضيف يروح لتسجيل الدخول --}}
                         <a class="btn btn--primary" href="{{ route('login') }}">
                             Get Started
+                        </a>
+
+                        <a class="btn btn--ghost" href="{{ route('signup') }}">
+                            Create Account
                         </a>
                     @endauth
                 </div>
             </div>
 
-            <div>
+            <div class="hero-img-wrap">
                 <img src="{{ asset('static/img/Warehouse.jpeg') }}"
-                     alt="Warehouse Illustration"
-                     style="max-width:100%;border-radius:14px">
+                     alt="Warehouse"
+                     class="hero-img">
             </div>
+        </div>
+    </section>
+
+    {{-- SERVICES --}}
+    <section class="home-section">
+        <div class="container">
+
+            <h2 class="section-title">Services</h2>
+
+            <div class="grid grid-3">
+
+                <article class="card hover-card">
+                    <div class="card-img">
+                        <img src="{{ asset('static/img/IMG_9744.png') }}">
+                    </div>
+
+                    <h3>Expiry Alerts</h3>
+                    <p class="muted">
+                        Get instant notifications for products nearing expiry to reduce waste.
+                    </p>
+                </article>
+
+                <article class="card hover-card">
+                    <div class="card-img">
+                        <img src="{{ asset('static/img/IMG_9745.png') }}">
+                    </div>
+
+                    <h3>Demand Forecasting</h3>
+                    <p class="muted">
+                        AI predicts future demand using historical sales data.
+                    </p>
+                </article>
+
+                <article class="card hover-card">
+                    <div class="card-img">
+                        <img src="{{ asset('static/img/IMG_9746.png') }}">
+                    </div>
+
+                    <h3>Stock Optimization</h3>
+                    <p class="muted">
+                        Smart stock monitoring to prevent shortage or overstock.
+                    </p>
+                </article>
+
+            </div>
+
         </div>
     </section>
 
     {{-- FEATURES --}}
     <section class="container section">
-        <h2>Main Features</h2>
+        <h2 class="section-title">Main Features</h2>
 
         <div class="cards">
-            <article class="card">
+
+            <article class="card hover-card">
                 <div class="card__icon">🔍</div>
                 <h3>Smart Tracking</h3>
-                <p>Track inventory movement and auto-update quantities with clear in/out logs.</p>
+                <p>Track inventory movement with automatic updates.</p>
             </article>
 
-            <article class="card">
+            <article class="card hover-card">
                 <div class="card__icon">📊</div>
                 <h3>Real-time Analytics</h3>
-                <p>Dashboards showing safe, warning, and critical items with live KPIs.</p>
+                <p>Live dashboards with clear KPIs and insights.</p>
             </article>
 
-            <article class="card">
+            <article class="card hover-card">
                 <div class="card__icon">🔔</div>
                 <h3>Automated Alerts</h3>
-                <p>Low stock and expiry reminders delivered instantly to the right users.</p>
+                <p>Receive alerts instantly for stock and expiry.</p>
             </article>
+
         </div>
     </section>
 
