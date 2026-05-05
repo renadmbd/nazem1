@@ -14,16 +14,9 @@ with open(MODEL_PATH, "rb") as f:
     model = pickle.load(f)
 
 # قراءة الـ JSON اللي جاي من Laravel من الـ stdin
-# شكل البيانات المتوقّع: { "dates": ["2025-12-01", "2025-12-02", ...] }
 data = json.load(sys.stdin)
 dates = data.get("dates", [])
 
-# =============================
-#   تجهيز الـ features للمودل
-# =============================
-# ⚠️ هنا لازم يكون نفس تجهيز البيانات اللي استخدمتيه وقت التدريب.
-# أنا حاط مثال بسيط (day index + day_of_week) عشان يشتغل مبدئياً،
-# لكن إذا المودل تدرب على أعمدة أكثر، عدّلي الكود هنا.
 
 X = []
 for i, d in enumerate(dates):
@@ -31,8 +24,6 @@ for i, d in enumerate(dates):
     day_index = i + 1
     day_of_week = dt.weekday()  # 0 = Monday ... 6 = Sunday
 
-    # TODO: عدّلي هذه القائمة عشان تطابق أعمدة التدريب بالضبط
-    # مثال لو تدربتي على [day_index, day_of_week]:
     features = [day_index, day_of_week]
 
     X.append(features)
