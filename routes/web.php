@@ -183,11 +183,11 @@ Route::middleware(['auth', 'admin'])->group(function () {
 // اختبار إرسال الإيميل
 Route::get('/test-email', function () {
     Mail::raw('Hello from NAZEM email test ✅', function ($message) {
-        $message->to('mlm.projectteam@gmail.com')
+        $message->to('renadmbd@gmail.com')
                 ->subject('NAZEM Test Email');
     });
 
-    return 'Test email sent (شيّكي بريدك الآن).';
+    return 'Test email sent (تم ارسال الايميل).';
 });
 
 
